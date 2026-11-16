@@ -11,6 +11,20 @@ for (const key of required) if (!process.env[key]) throw new Error(`Missing requ
 const db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession:false, autoRefreshToken:false } });
 const app = Fastify({ logger: { redact: ['req.headers.authorization','req.headers.cookie'] }, bodyLimit: 256 * 1024, trustProxy: true });
 const origin = process.env.APP_ORIGIN?.split(',').map(x=>x.trim()).filter(Boolean) || [];
+const requestWindows = new Map();
+function takeWindow(key, limit, windowMs, now=Date.now()) {
+  let item=requestWindows.get(key);
+  if(item?.blockedUntil>now) return {ok:false,blocked:true,remaining:Math.ceil((item.blockedUntil-now)/1000)};
+  if(!item || now-item.start>=windowMs) item={start:now,count:0,violations:item?.violations||0,blockedUntil:0};
+  if(item.count>=limit){item.violations++;if(item.violations>=2)item.blockedUntil=now+15*60*1000;requestWindows.set(key,item);return {ok:false,blocked:item.blockedUntil>now,remaining:item.blockedUntil>now?900:60};}
+  item.count++;requestWindows.set(key,item);return {ok:true};
+}
+async function rateGuard(req,reply){
+  const ip=takeWindow('ip:'+req.ip,20,60_000);
+  if(!ip.ok)return reply.code(429).send({error:'IP_RATE_LIMIT',retryAfter:ip.remaining});
+  const user=takeWindow('user:'+req.user.id,5,60_000);
+  if(!user.ok)return reply.code(429).send({error:'USER_RATE_LIMIT',retryAfter:user.remaining});
+}
 await app.register(helmet, { contentSecurityPolicy: false });
 await app.register(cors, { origin: origin.length ? origin : false, credentials: true });
 await app.register(rateLimit, { global: false });
@@ -48,6 +62,7 @@ async function providerStream(messages, instructions, reply) {
     body:JSON.stringify({model,stream:true,max_tokens:Number(process.env.MAX_OUTPUT_TOKENS || 800),messages:[{role:'system',content:SYSTEM_PROMPT + (instructions ? '\\n\\nتعليمات المستخدم الإضافية: '+instructions : '')},...messages]})
   });
   if (!upstream.ok || !upstream.body) throw new Error('AI_UPSTREAM_'+upstream.status);
+  reply.hijack();
   reply.raw.writeHead(200, {'content-type':'text/event-stream; charset=utf-8','cache-control':'no-cache, no-transform','connection':'keep-alive','x-accel-buffering':'no'});
   const reader=upstream.body.getReader(), decoder=new TextDecoder();
   let buffer='', answer='', inputTokens=messages.reduce((n,m)=>n+estimateTokens(m.content),0);
@@ -78,13 +93,15 @@ app.get('/v1/usage',{preHandler:auth},async(req,reply)=>{
   const map=Object.fromEntries((limits||[]).map(x=>[x.key,Number(x.value)]));
   return {used:usage?.used||0,limit:usage?.limit_value??map.daily_message_limit??20,imageUsed:usage?.image_used||0,imageLimit:usage?.image_limit??map.daily_image_limit??5,resetAt:new Date(Date.UTC(new Date().getUTCFullYear(),new Date().getUTCMonth(),new Date().getUTCDate()+1)).toISOString()};
 });
-app.post('/v1/chat',{preHandler:auth,config:{rateLimit:{max:Number(process.env.MAX_MESSAGES_PER_MINUTE||5),timeWindow:'1 minute'}}},async(req,reply)=>{
+app.post('/v1/chat',{preHandler:[auth,rateGuard]},async(req,reply)=>{
   const {conversationId,message}=req.body||{};
   if(typeof message!=='string'||!message.trim()) return reply.code(400).send({error:'MESSAGE_REQUIRED'});
   const maxChars=Number(await setting('max_input_chars',Number(process.env.MAX_INPUT_CHARS||2000)));
   if(message.length>maxChars) return reply.code(413).send({error:'INPUT_TOO_LONG',maxChars});
   if(await isBanned(req.user.id)) return reply.code(403).send({error:'USER_BANNED'});
-  if(!process.env.AI_API_KEY) return reply.code(503).send({error:'AI_PROVIDER_NOT_CONFIGURED',message:'المساعد غير متاح مؤقتاً حتى يتم إعداد محرك مجاني.'});
+  if(!process.env.AI_API_KEY || !process.env.AI_API_BASE_URL || !process.env.AI_MODEL) return reply.code(503).send({error:'AI_PROVIDER_NOT_CONFIGURED',message:'المساعد غير متاح مؤقتاً حتى يتم إعداد محرك مجاني.'});
+  if(process.env.AI_PROVIDER_VERIFIED_FREE!=='true') return reply.code(503).send({error:'FREE_PROVIDER_NOT_VERIFIED',message:'لم يتم التحقق بعد من أن محرك الذكاء الاصطناعي مجاني بالكامل.'});
+  if(Number(process.env.AI_INPUT_COST_PER_MILLION||0)>0 || Number(process.env.AI_OUTPUT_COST_PER_MILLION||0)>0) return reply.code(503).send({error:'PAID_USAGE_DISABLED',message:'الاستخدام المدفوع معطّل في ZUNO.'});
   const cap=Number(await setting('daily_cost_cap_usd',Number(process.env.AI_DAILY_COST_CAP_USD||0)));
   const {data:costRows}=await db.from('ai_cost_log').select('cost_usd').gte('created_at',new Date().toISOString().slice(0,10)+'T00:00:00Z');
   const cost=(costRows||[]).reduce((n,x)=>n+Number(x.cost_usd||0),0);
