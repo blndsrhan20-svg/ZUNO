@@ -89,7 +89,7 @@ async function requireStaff(req, reply) {
   if (error || !data || !['admin','moderator'].includes(data.role)) return reply.code(403).send({ error:'ADMIN_REQUIRED' });
   req.staffRole = data.role;
 }
-app.get('/v1/admin/overview', { preHandler:[auth,requireStaff] }, async(req,reply) => {
+app.get('/v1/admin/overview', { preHandler:[auth,rateGuard,requireStaff] }, async(req,reply) => {
   const now = new Date().toISOString();
   const [users, conversations, messages, warnings, bans, moderation] = await Promise.all([
     db.from('ai_user_settings').select('user_id',{count:'exact',head:true}),
@@ -101,9 +101,9 @@ app.get('/v1/admin/overview', { preHandler:[auth,requireStaff] }, async(req,repl
   ]);
   const failed=[users,conversations,messages,warnings,bans,moderation].find(x=>x.error);
   if(failed) return reply.code(500).send({error:'ADMIN_QUERY_FAILED'});
-  return {role:req.staffRole,stats:{users:users.count||0,conversations:conversations.count||0,messages:messages.count||0,warnings:warnings.count||0,activeBans:bans.count||0},recentModeration:moderation.data||[]};
+  return {role:req.staffRole,stats:{accountsWithSettings:users.count||0,conversations:conversations.count||0,messages:messages.count||0,warnings:warnings.count||0,activeBans:bans.count||0},recentModeration:moderation.data||[]};
 });
-app.post('/v1/admin/warnings', { preHandler:[auth,requireStaff] }, async(req,reply) => {
+app.post('/v1/admin/warnings', { preHandler:[auth,rateGuard,requireStaff] }, async(req,reply) => {
   const {userId,reason,excerpt=''}=req.body||{};
   if(typeof userId!=='string'||typeof reason!=='string'||!reason.trim()||reason.length>500||typeof excerpt!=='string'||excerpt.length>500) return reply.code(400).send({error:'INVALID_WARNING'});
   const {data,error}=await db.from('ai_user_warnings').insert({user_id:userId,reason:reason.trim(),excerpt,created_by:req.user.id}).select('id,user_id,reason,created_at').single();
