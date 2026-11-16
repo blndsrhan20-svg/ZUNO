@@ -42,7 +42,32 @@ export default function App(){
  const filtered=useMemo(()=>conversations.filter(c=>(c.title||'').toLowerCase().includes(search.toLowerCase())),[conversations,search]);
  const remaining=usage?Math.max(0,usage.limit-usage.used):null;
  if(!isSupabaseConfigured)return <div className="setup"><b>ZUNO</b><p>أضف إعدادات Supabase إلى ملف البيئة لتشغيل تسجيل الدخول.</p></div>;
- if(!session)return <main className="auth-screen"><div className="auth-panel"><div className="brand"><span className="brand-mark">Z</span><b>ZUNO</b></div><div className="auth-copy"><span>مساحة تفكيرك تبدأ هنا</span><h1>{authMode==='login'?'أهلاً بعودتك':'أنشئ حسابك في ZUNO'}</h1><p>اسأل، اكتب، حلّل، وتعلّم مع المساعد.</p></div><form onSubmit={authSubmit}>{authMode==='signup'&&<label>الاسم<input value={display} onChange={e=>setDisplay(e.target.value)} required placeholder="اسمك"/></label>}<label>البريد الإلكتروني<input type="email" value={email} onChange={e=>setEmail(e.target.value)} required placeholder="name@example.com"/></label><label>كلمة المرور<input type="password" value={password} onChange={e=>setPassword(e.target.value)} required minLength={6} placeholder="6 أحرف على الأقل"/></label><button className="button-primary" disabled={authBusy}>{authBusy?'جارٍ التنفيذ...':authMode==='login'?'تسجيل الدخول':'إنشاء حساب'}</button></form><button className="text-button" onClick={()=>setAuthMode(authMode==='login'?'signup':'login')}>{authMode==='login'?'ليس لديك حساب؟ أنشئ حساباً':'لديك حساب؟ تسجيل الدخول'}</button>{notice&&<p className="notice">{notice}</p>}</div></main>;
+ if(!session)return <main className="auth-screen">
+  <div className="auth-glow auth-glow-one"/><div className="auth-glow auth-glow-two"/>
+  <section className="auth-layout">
+   <div className="auth-showcase">
+    <div className="auth-orbit"><span className="auth-orbit-dot"/></div>
+    <div className="auth-monogram" aria-label="ZUNO"><span>Z</span></div>
+    <div className="auth-wordmark">ZUNO<span className="brand-period">.</span></div>
+    <p className="auth-tagline">مساحة هادئة لأفكار أكبر.</p>
+    <div className="auth-divider"><i/><span>THINK · CREATE · DISCOVER</span><i/></div>
+   </div>
+   <div className="auth-panel">
+    <div className="auth-panel-top"><span className="auth-eyebrow">مرحباً بك في ZUNO</span><span className="secure-label"><span/> مساحة خاصة وآمنة</span></div>
+    <div className="auth-copy"><h1>{authMode==='login'?'أهلاً بعودتك':'ابدأ رحلتك'}</h1><p>{authMode==='login'?'سجّل الدخول وتابع أفكارك من حيث توقفت.':'أنشئ حسابك، ودع أفكارك تأخذ مساحتها.'}</p></div>
+    <form onSubmit={authSubmit}>
+     {authMode==='signup'&&<label>الاسم<input value={display} onChange={e=>setDisplay(e.target.value)} required placeholder="كيف نناديك؟" autoComplete="name"/></label>}
+     <label>البريد الإلكتروني<input type="email" value={email} onChange={e=>setEmail(e.target.value)} required placeholder="name@example.com" autoComplete="email"/></label>
+     <label>كلمة المرور<input type="password" value={password} onChange={e=>setPassword(e.target.value)} required minLength={6} placeholder="6 أحرف على الأقل" autoComplete={authMode==='login'?'current-password':'new-password'}/></label>
+     <button className="button-primary" disabled={authBusy}>{authBusy?'جارٍ التنفيذ...':authMode==='login'?'تسجيل الدخول':'إنشاء حساب'}<span aria-hidden="true">↗</span></button>
+    </form>
+    <div className="auth-switch"><span>{authMode==='login'?'مستخدم جديد في ZUNO؟':'لديك حساب بالفعل؟'}</span><button className="text-button" onClick={()=>setAuthMode(authMode==='login'?'signup':'login')}>{authMode==='login'?'إنشاء حساب':'تسجيل الدخول'}</button></div>
+    {notice&&<p className="notice">{notice}</p>}
+    <p className="auth-footnote">بالمتابعة، أنت تستخدم ZUNO وفق شروط الاستخدام وسياسة الخصوصية.</p>
+   </div>
+  </section>
+  <div className="auth-bottom">ZUNO <span>·</span> YOUR SPACE TO THINK</div>
+ </main>;
  return <div className="app-shell"><aside className={'sidebar '+(mobile?'mobile-open':'')}><div className="sidebar-top"><div className="brand"><span className="brand-mark">Z</span><b>ZUNO</b></div><button className="icon-button hide-mobile" onClick={()=>setMobile(false)}><X size={18}/></button></div><button className="new-chat" onClick={newConversation}><Plus size={18}/> محادثة جديدة</button><div className="history-label">محادثاتك</div><div className="history-search"><Search size={15}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="ابحث في المحادثات"/></div><div className="history-list">{filtered.map(c=><div className={'history-item '+(active?.id===c.id?'selected':'')} key={c.id}><button onClick={()=>openConversation(c)}><MessageSquare size={16}/><span>{c.title||'محادثة جديدة'}</span></button><button className="delete-chat" onClick={()=>deleteConversation(c)} aria-label="حذف"><Trash2 size={14}/></button></div>)}</div><div className="sidebar-bottom"><div className="usage-mini">{remaining!==null?<><span>باقي لك اليوم</span><b>{remaining} / {usage.limit}</b><div className="usage-track"><i style={{width:(usage.limit?Math.max(0,remaining/usage.limit*100):0)+'%'}}/></div></>:<span>حساب ZUNO</span>}</div><button className="profile-button" onClick={()=>setSettingsOpen(true)}><span className="profile-avatar">{(session.user.email||'Z').slice(0,1).toUpperCase()}</span><span><b>{session.user.user_metadata?.display_name||session.user.email}</b><small>الإعدادات والحساب</small></span><Settings size={17}/></button><button className="logout-button" onClick={()=>supabase.auth.signOut()}><LogOut size={16}/> تسجيل الخروج</button></div></aside>
  <main className="workspace"><header className="topbar"><button className="icon-button mobile-menu" onClick={()=>setMobile(true)}><Menu size={19}/></button><div className="topbar-title">المساعد <span>· ZUNO</span></div><div className="topbar-actions"><button className="icon-button" onClick={()=>setTheme(theme==='dark'?'light':'dark')} title="تغيير المظهر">{theme==='dark'?<Sun size={18}/>:<Moon size={18}/>}</button><button className="icon-button" onClick={()=>setSettingsOpen(true)}><Settings size={18}/></button></div></header>
  {remaining!==null&&<div className={'quota-bar '+(remaining<=3?'quota-warning':'')}><span>{remaining<=3?'اقتربت من نهاية حصتك اليومية':'استخدامك اليومي'}</span><b>باقي لك {remaining} من {usage.limit} رسالة</b></div>}
