@@ -111,7 +111,7 @@ app.post('/v1/admin/warnings', { preHandler:[auth,rateGuard,requireStaff] }, asy
   await db.from('ai_moderation_logs').insert({user_id:userId,category:'conduct',excerpt,decision:'warning',details:{reason:reason.trim(),staff_role:req.staffRole,staff_id:req.user.id}});
   return reply.code(201).send({warning:data});
 });
-app.post('/v1/admin/bans', { preHandler:[auth,requireStaff] }, async(req,reply) => {
+app.post('/v1/admin/bans', { preHandler:[auth,rateGuard,requireStaff] }, async(req,reply) => {
   if(req.staffRole!=='admin') return reply.code(403).send({error:'ADMIN_ONLY'});
   const {userId,reason,durationMinutes=null}=req.body||{};
   if(typeof userId!=='string'||typeof reason!=='string'||!reason.trim()||reason.length>500) return reply.code(400).send({error:'INVALID_BAN'});
