@@ -83,6 +83,46 @@ async function providerStream(messages, instructions, reply) {
     return {answer,inputTokens,outputTokens:estimateTokens(answer)};
   } catch(e) { try{reader.cancel()}catch{}; throw e; }
 }
+
+async function requireStaff(req, reply) {
+  const { data, error } = await db.from('ai_admin_roles').select('role').eq('user_id', req.user.id).maybeSingle();
+  if (error || !data || !['admin','moderator'].includes(data.role)) return reply.code(403).send({ error:'ADMIN_REQUIRED' });
+  req.staffRole = data.role;
+}
+app.get('/v1/admin/overview', { preHandler:[auth,requireStaff] }, async(req,reply) => {
+  const now = new Date().toISOString();
+  const [users, conversations, messages, warnings, bans, moderation] = await Promise.all([
+    db.from('ai_user_settings').select('user_id',{count:'exact',head:true}),
+    db.from('ai_conversations').select('id',{count:'exact',head:true}),
+    db.from('ai_messages').select('id',{count:'exact',head:true}),
+    db.from('ai_user_warnings').select('id',{count:'exact',head:true}),
+    db.from('ai_user_bans').select('id',{count:'exact',head:true}).lte('starts_at',now).or('ends_at.is.null,ends_at.gt.'+now),
+    db.from('ai_moderation_logs').select('id,category,decision,created_at,excerpt',{count:'exact'}).order('created_at',{ascending:false}).limit(20)
+  ]);
+  const failed=[users,conversations,messages,warnings,bans,moderation].find(x=>x.error);
+  if(failed) return reply.code(500).send({error:'ADMIN_QUERY_FAILED'});
+  return {role:req.staffRole,stats:{users:users.count||0,conversations:conversations.count||0,messages:messages.count||0,warnings:warnings.count||0,activeBans:bans.count||0},recentModeration:moderation.data||[]};
+});
+app.post('/v1/admin/warnings', { preHandler:[auth,requireStaff] }, async(req,reply) => {
+  const {userId,reason,excerpt=''}=req.body||{};
+  if(typeof userId!=='string'||typeof reason!=='string'||!reason.trim()||reason.length>500||typeof excerpt!=='string'||excerpt.length>500) return reply.code(400).send({error:'INVALID_WARNING'});
+  const {data,error}=await db.from('ai_user_warnings').insert({user_id:userId,reason:reason.trim(),excerpt,created_by:req.user.id}).select('id,user_id,reason,created_at').single();
+  if(error) return reply.code(400).send({error:'WARNING_CREATE_FAILED'});
+  await db.from('ai_moderation_logs').insert({user_id:userId,category:'conduct',excerpt,decision:'warning',details:{reason:reason.trim(),staff_role:req.staffRole,staff_id:req.user.id}});
+  return reply.code(201).send({warning:data});
+});
+app.post('/v1/admin/bans', { preHandler:[auth,requireStaff] }, async(req,reply) => {
+  if(req.staffRole!=='admin') return reply.code(403).send({error:'ADMIN_ONLY'});
+  const {userId,reason,durationMinutes=null}=req.body||{};
+  if(typeof userId!=='string'||typeof reason!=='string'||!reason.trim()||reason.length>500) return reply.code(400).send({error:'INVALID_BAN'});
+  if(durationMinutes!==null&&(!Number.isInteger(durationMinutes)||durationMinutes<1||durationMinutes>525600)) return reply.code(400).send({error:'INVALID_DURATION'});
+  const endsAt=durationMinutes===null?null:new Date(Date.now()+durationMinutes*60000).toISOString();
+  const {data,error}=await db.from('ai_user_bans').insert({user_id:userId,reason:reason.trim(),starts_at:new Date().toISOString(),ends_at:endsAt,created_by:req.user.id}).select('id,user_id,reason,starts_at,ends_at').single();
+  if(error) return reply.code(400).send({error:'BAN_CREATE_FAILED'});
+  await db.from('ai_moderation_logs').insert({user_id:userId,category:'conduct',decision:'ban',details:{reason:reason.trim(),ends_at:endsAt,staff_id:req.user.id}});
+  return reply.code(201).send({ban:data});
+});
+
 app.get('/health', async()=>({ok:true,service:'ZUNO'}));
 app.get('/v1/usage',{preHandler:auth},async(req,reply)=>{
   const day=new Date().toISOString().slice(0,10);
