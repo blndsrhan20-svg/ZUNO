@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { Plus, Search, Settings, LogOut, Send, Square, Menu, X, Sparkles, MessageSquare, Sun, Moon, Trash2 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import './styles.css';
 const API=(import.meta.env.VITE_API_BASE_URL||'').replace(/\/$/,'');
-function MessageBody({content}){return <div className="message-body"><p>{content||''}</p></div>}
+function MessageBody({content}){return <div className="message-body"><ReactMarkdown remarkPlugins={[remarkGfm]}>{content||''}</ReactMarkdown></div>}
 export default function App(){
  const [session,setSession]=useState(null),[authMode,setAuthMode]=useState('login'),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[display,setDisplay]=useState('');
  const [conversations,setConversations]=useState([]),[active,setActive]=useState(null),[messages,setMessages]=useState([]),[draft,setDraft]=useState('');
