@@ -20,9 +20,9 @@ function takeWindow(key, limit, windowMs, now=Date.now()) {
   item.count++;requestWindows.set(key,item);return {ok:true};
 }
 async function rateGuard(req,reply){
-  const ip=takeWindow('ip:'+req.ip,20,60_000);
+  const ip=takeWindow('ip:'+req.ip,Number(process.env.MAX_REQUESTS_PER_IP_PER_MINUTE||20),60_000);
   if(!ip.ok)return reply.code(429).send({error:'IP_RATE_LIMIT',retryAfter:ip.remaining});
-  const user=takeWindow('user:'+req.user.id,5,60_000);
+  const user=takeWindow('user:'+req.user.id,Number(process.env.MAX_MESSAGES_PER_MINUTE||5),60_000);
   if(!user.ok)return reply.code(429).send({error:'USER_RATE_LIMIT',retryAfter:user.remaining});
 }
 await app.register(helmet, { contentSecurityPolicy: false });
