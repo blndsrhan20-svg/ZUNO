@@ -52,7 +52,7 @@
 .zuno-landing{--zl-bg:#07060a;--zl-bg2:#100e14;--zl-ink:#f6efe0;--zl-muted:#a89f8c;--zl-gold:#d8b45e;--zl-gold2:#fff1c1;min-height:100vh;background:var(--zl-bg);color:var(--zl-ink);font-family:Alexandria,Arial,sans-serif;overflow:hidden}
 .zl-nav{height:72px;position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:0 clamp(18px,5vw,72px);border-bottom:1px solid rgba(216,180,94,.18);background:rgba(7,6,10,.82);backdrop-filter:blur(16px)}
 .zl-wordmark{font:600 25px Georgia,serif;letter-spacing:.2em;color:var(--zl-gold2);direction:ltr}.zl-wordmark span{color:var(--zl-gold)}
-.zl-nav-cta,.zl-actions button,.zl-final button{border:1px solid var(--zl-gold);background:linear-gradient(120deg,var(--zl-gold2),var(--zl-gold) 55%,#8a6a25);color:#171106;padding:11px 23px;font:600 12px inherit;cursor:pointer;transition:transform .2s,box-shadow .2s}
+.zl-nav-cta,.zl-actions button,.zl-final button{border:1px solid var(--zl-gold);background:linear-gradient(120deg,var(--zl-gold2),var(--zl-gold) 55%,#8a6a25);color:#171106;padding:11px 23px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;transition:transform .2s,box-shadow .2s}
 .zl-nav-cta:hover,.zl-actions button:hover,.zl-final button:hover{transform:translateY(-2px);box-shadow:0 8px 32px #d8b45e35}
 .zl-hero{min-height:min(790px,calc(100svh - 72px));position:relative;display:grid;place-items:center;text-align:center;padding:55px 20px 82px;isolation:isolate}
 .zl-orbit{position:absolute;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none}
