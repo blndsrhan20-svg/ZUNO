@@ -169,3 +169,9 @@
  .theme-choices button{font-size:9px}
 }
 @media(prefers-reduced-motion:reduce){.settings-nav-item,.settings-save{transition:none}}
+
+.settings-extra-preferences{padding:4px 0 0;border-top:1px solid #292929}
+.settings-extra-preferences>p{color:#d8b45e;font-size:10px;margin:13px 0 4px}
+:root[data-density="compact"] .message{padding-top:9px;padding-bottom:9px}
+:root[data-density="compact"] .chat-area{padding-top:20px}
+:root[data-motion="reduce"] *, :root[data-motion="reduce"] *:before, :root[data-motion="reduce"] *:after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
