@@ -4,9 +4,11 @@ import { Plus, Search, Settings, LogOut, Send, Square, Menu, X, Sparkles, Messag
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import './styles.css';
+import ZunoLanding from './ZunoLanding.jsx';
 const API=(import.meta.env.VITE_API_BASE_URL||'').replace(/\/$/,'');
 function MessageBody({content}){return <div className="message-body"><ReactMarkdown remarkPlugins={[remarkGfm]}>{content||''}</ReactMarkdown></div>}
 export default function App(){
+ const [showLanding,setShowLanding]=useState(true);
  const [session,setSession]=useState(null),[authMode,setAuthMode]=useState('login'),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[display,setDisplay]=useState('');
  const [conversations,setConversations]=useState([]),[active,setActive]=useState(null),[messages,setMessages]=useState([]),[draft,setDraft]=useState('');
  const [usage,setUsage]=useState(null),[loading,setLoading]=useState(false),[authBusy,setAuthBusy]=useState(false),[notice,setNotice]=useState(''),[mobile,setMobile]=useState(false),[settingsOpen,setSettingsOpen]=useState(false);
@@ -41,6 +43,7 @@ export default function App(){
  async function deleteConversation(c){if(!confirm('تحذف هذه المحادثة؟'))return;const {error}=await supabase.from('ai_conversations').delete().eq('id',c.id);if(error)setNotice(error.message);else{setConversations(v=>v.filter(x=>x.id!==c.id));if(active?.id===c.id){setActive(null);setMessages([])}}}
  const filtered=useMemo(()=>conversations.filter(c=>(c.title||'').toLowerCase().includes(search.toLowerCase())),[conversations,search]);
  const remaining=usage?Math.max(0,usage.limit-usage.used):null;
+ if(!session && showLanding)return <ZunoLanding onEnter={()=>setShowLanding(false)}/>;
  if(!isSupabaseConfigured)return <div className="setup"><b>ZUNO</b><p>أضف إعدادات Supabase إلى ملف البيئة لتشغيل تسجيل الدخول.</p></div>;
  if(!session)return <main className="auth-screen">
   <div className="auth-glow auth-glow-one"/><div className="auth-glow auth-glow-two"/>
