@@ -35,16 +35,16 @@ export default function AccountSettings({user,usage,instructions,setInstructions
   }
   async function exportData(){
     setBusy(true);try{
-      const {data:conversations,error:cError}=await supabase.from('ai_conversations').select('id,title,created_at,updated_at').eq('user_id',user.id).order('created_at',{ascending:true});
+      const {data:conversations,error:cError}=await supabase.from('conversations').select('id,title,created_at,updated_at').eq('user_id',user.id).order('created_at',{ascending:true});
       if(cError)throw cError;
-      const {data:messages,error:mError}=await supabase.from('ai_messages').select('id,conversation_id,role,content,created_at').eq('user_id',user.id).order('created_at',{ascending:true});
+      const {data:messages,error:mError}=await supabase.from('messages').select('id,conversation_id,role,content,created_at').eq('user_id',user.id).order('created_at',{ascending:true});
       if(mError)throw mError;
       const blob=new Blob([JSON.stringify({exported_at:new Date().toISOString(),account:{email:user.email,created_at:user.created_at},conversations:conversations||[],messages:messages||[]},null,2)],{type:'application/json'});
       const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='zuno-my-data.json';a.click();URL.revokeObjectURL(url);flash('تم تجهيز نسخة بياناتك وتنزيلها.');
     }catch(e){fail(e.message)}finally{setBusy(false)}
   }
   async function clearHistory(){
-    setBusy(true);try{const {error}=await supabase.from('ai_conversations').delete().eq('user_id',user.id);if(error)throw error;setConfirmDelete(false);flash('تم حذف محادثات حسابك.')}catch(e){fail(e.message)}finally{setBusy(false)}
+    setBusy(true);try{const {error}=await supabase.from('conversations').delete().eq('user_id',user.id);if(error)throw error;setConfirmDelete(false);flash('تم حذف محادثات حسابك.')}catch(e){fail(e.message)}finally{setBusy(false)}
   }
   const nav=[['general','عام',SlidersHorizontal],['profile','الملف الشخصي',UserRound],['privacy','الخصوصية',Shield],['security','الأمان',LockKeyhole]];
   return <main className="account-settings-page">
