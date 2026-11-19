@@ -11,6 +11,7 @@ export default function ZunoLanding({ onEnter }) {
     let width = 0, height = 0, dpr = 1, frame = 0;
     let points = [];
     const resize = () => {
+      cancelAnimationFrame(frame);
       const box = canvas.getBoundingClientRect();
       width = box.width; height = box.height;
       dpr = Math.min(window.devicePixelRatio || 1, 2);
