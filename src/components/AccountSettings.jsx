@@ -14,6 +14,10 @@ export default function AccountSettings({user,usage,instructions,setInstructions
   const [confirmDelete,setConfirmDelete]=useState(false);
   const [hidePreview,setHidePreview]=useState(localStorage.getItem('zuno_hide_preview')==='true');
   const [confirmBeforeDelete,setConfirmBeforeDelete]=useState(localStorage.getItem('zuno_confirm_delete')!=='false');
+  const [compact,setCompact]=useState(localStorage.getItem('zuno_compact')==='true');
+  const [enterSends,setEnterSends]=useState(localStorage.getItem('zuno_enter_sends')!=='false');
+  const [reduceMotion,setReduceMotion]=useState(localStorage.getItem('zuno_reduce_motion')==='true');
+  const [showUsage,setShowUsage]=useState(localStorage.getItem('zuno_show_usage')!=='false');
   const [sessionsInfo,setSessionsInfo]=useState('تتم إدارة جلسة الدخول عبر مزوّد المصادقة الآمن.');
 
   useEffect(()=>{setName(user.user_metadata?.display_name||'')},[user.id]);
@@ -53,6 +57,13 @@ export default function AccountSettings({user,usage,instructions,setInstructions
           <label className="settings-field">تعليمات المساعد<textarea value={instructions} onChange={e=>setInstructions(e.target.value)} placeholder="مثلاً: أفضّل الإجابات المختصرة والواضحة."/></label>
           <div className="settings-field"><span>لغة الواجهة</span><select value={language} onChange={e=>setLanguage(e.target.value)}><option value="auto">تلقائي</option><option value="ar">العربية</option><option value="en">English</option></select></div>
           <div className="settings-field"><span>المظهر</span><div className="theme-choices"><button className={theme==='dark'?'chosen':''} onClick={()=>setTheme('dark')}><Moon size={16}/> داكن</button><button className={theme==='light'?'chosen':''} onClick={()=>setTheme('light')}><Sun size={16}/> فاتح</button><button className={theme==='system'?'chosen':''} onClick={()=>setTheme('system')}><Monitor size={16}/> النظام</button></div></div>
+          <div className="settings-extra-preferences">
+            <p>تفضيلات إضافية</p>
+            <label className="settings-toggle"><span><b>واجهة مدمجة</b><small>تقليل المسافات لعرض محتوى أكثر.</small></span><input type="checkbox" checked={compact} onChange={e=>{setCompact(e.target.checked);localStorage.setItem('zuno_compact',String(e.target.checked));document.documentElement.dataset.density=e.target.checked?'compact':'comfortable'}}/></label>
+            <label className="settings-toggle"><span><b>إرسال الرسالة بزر Enter</b><small>أوقفه إذا تفضّل سطراً جديداً عند الضغط على Enter.</small></span><input type="checkbox" checked={enterSends} onChange={e=>{setEnterSends(e.target.checked);localStorage.setItem('zuno_enter_sends',String(e.target.checked))}}/></label>
+            <label className="settings-toggle"><span><b>تقليل الحركة</b><small>تقليل الانتقالات والحركات في الواجهة.</small></span><input type="checkbox" checked={reduceMotion} onChange={e=>{setReduceMotion(e.target.checked);localStorage.setItem('zuno_reduce_motion',String(e.target.checked));document.documentElement.dataset.motion=e.target.checked?'reduce':'full'}}/></label>
+            <label className="settings-toggle"><span><b>عرض استهلاك الرسائل</b><small>إظهار أو إخفاء شريط الاستهلاك اليومي.</small></span><input type="checkbox" checked={showUsage} onChange={e=>{setShowUsage(e.target.checked);localStorage.setItem('zuno_show_usage',String(e.target.checked))}}/></label>
+          </div>
           <div className="settings-usage"><span>استهلاكك اليومي</span><b>{usage?usage.used+' / '+usage.limit+' رسالة':'غير متاح حالياً'}</b></div>
           <button className="settings-save" onClick={saveProfile} disabled={busy}><Save size={16}/> حفظ التغييرات</button>
         </div>}
